@@ -872,6 +872,16 @@
 
     const url = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
     window.open(url, "_blank");
+
+    cart = [];
+    nameInput.value = "";
+    addressInput.value = "";
+    regionSelect.value = "";
+    nameInput.classList.remove("invalid");
+    addressInput.classList.remove("invalid");
+    regionSelect.classList.remove("invalid");
+    renderCart();
+    closeDrawer();
   }
 
   function showPage(pageId, el) {
