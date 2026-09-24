@@ -498,6 +498,7 @@
   const WA_NUMBER = "6281515092722";
 
   const SHIPPING_RATES = {
+    "Ambil di Toko (Gratis)": { price: 0, eta: "Bisa diambil hari ini" },
     "Jawa Timur (Surabaya, Malang, Pasuruan, dll.)": { price: 9500, eta: "1–2 hari" },
     "DKI Jakarta & Jawa Barat (Jakarta, Bandung, Bekasi)": { price: 18000, eta: "2–3 hari" },
     "Jawa Tengah & DI Yogyakarta (Semarang, Jogja, Solo)": { price: 16000, eta: "2–3 hari" },
@@ -781,7 +782,7 @@
     const shippingCost = region ? SHIPPING_RATES[region].price : 0;
     const total = subtotal + shippingCost;
     document.getElementById("subtotalPrice").textContent = rupiah(subtotal);
-    document.getElementById("shippingPrice").textContent = region ? rupiah(shippingCost) : "Pilih wilayah";
+    document.getElementById("shippingPrice").textContent = region ? (shippingCost === 0 ? "Gratis" : rupiah(shippingCost)) : "Pilih wilayah";
     document.getElementById("totalPrice").textContent = rupiah(total);
   }
 
@@ -867,8 +868,11 @@
     const shippingInfo = SHIPPING_RATES[region];
     const shippingCost = shippingInfo.price;
     const total = subtotal + shippingCost;
+    const isPickup = shippingCost === 0;
     msg += `\nSubtotal: ${rupiah(subtotal)}\n`;
-    msg += `Ongkir (J&T, est. ±0,9 kg, estimasi ${shippingInfo.eta}): ${rupiah(shippingCost)}\n`;
+    msg += isPickup
+      ? `Pengiriman: Ambil di Toko (Gratis)\n`
+      : `Ongkir (J&T, est. ±0,9 kg, estimasi ${shippingInfo.eta}): ${rupiah(shippingCost)}\n`;
     msg += `*Total: ${rupiah(total)}*\n\n`;
     msg += `Mohon segera transfer sesuai total di atas, lalu kirim bukti transfer di chat ini ya. Terima kasih!`;
 
