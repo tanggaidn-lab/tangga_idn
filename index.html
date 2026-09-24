@@ -242,6 +242,8 @@
     padding: 8px 14px; font-size: 13px; cursor: pointer; font-weight: 600;
   }
   .size-opt.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .size-opt:disabled { opacity: 0.35; cursor: not-allowed; text-decoration: line-through; }
+  .size-stock-note { font-size: 11px; color: var(--ink-soft); margin-top: -14px; margin-bottom: 20px; }
   .qty-row { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
   .qty-btn {
     width: 34px; height: 34px; border: 1px solid var(--line); background: none;
@@ -390,7 +392,7 @@
 <section class="catalog" id="discount-section">
   <div class="catalog-head">
     <h2 class="display" style="font-size:26px;">Discount</h2>
-    <p>Harga khusus pre-order sebelum launching</p>
+    <p>Produk yang lagi diskon spesial</p>
   </div>
   <div class="grid" id="discountGrid"></div>
 </section>
@@ -438,6 +440,7 @@
 
       <span class="field-label">Ukuran</span>
       <div class="size-row" id="sheetSizes"></div>
+      <p class="size-stock-note" id="sizeStockNote"></p>
 
       <span class="field-label">Jumlah</span>
       <div class="qty-row">
@@ -498,7 +501,7 @@
   const WA_NUMBER = "6281515092722";
 
   const SHIPPING_RATES = {
-    "Ambil di Toko (Gratis)": { price: 0, eta: "Bisa diambil hari ini" },
+    "Ambil di Toko": { price: 0, eta: "Bisa diambil hari ini" },
     "Jawa Timur (Surabaya, Malang, Pasuruan, dll.)": { price: 9500, eta: "1–2 hari" },
     "DKI Jakarta & Jawa Barat (Jakarta, Bandung, Bekasi)": { price: 18000, eta: "2–3 hari" },
     "Jawa Tengah & DI Yogyakarta (Semarang, Jogja, Solo)": { price: 16000, eta: "2–3 hari" },
@@ -537,6 +540,16 @@
         .filter(row => row.NAMA && String(row.NAMA).trim())
         .map((row, i) => {
           const discRange = parseDateRange(row["TANGGAL DISKON"]);
+          const sizeList = (row.SIZE || "").split("/").map(s => s.trim()).filter(Boolean);
+          const stockRaw = (row.STOCK || "").toString().split(/[\/|]/).map(s => s.trim()).filter(Boolean);
+          let stockPerSize = {};
+          if (stockRaw.length === sizeList.length && sizeList.length > 0) {
+            sizeList.forEach((sz, idx) => { stockPerSize[sz] = parseInt(stockRaw[idx], 10) || 0; });
+          } else {
+            const flatStock = parseInt(stockRaw[0], 10) || 0;
+            sizeList.forEach(sz => { stockPerSize[sz] = flatStock; });
+          }
+          const totalStock = Object.values(stockPerSize).reduce((a, b) => a + b, 0);
           return {
             id: i + 1,
             name: String(row.NAMA).trim(),
@@ -544,8 +557,9 @@
             category: (row.TYPE || "man").trim().toLowerCase(),
             price: parsePrice(row.HARGA),
             discount: parseDiscount(row.DISKON),
-            sizes: (row.SIZE || "").split("/").map(s => s.trim()).filter(Boolean),
-            stock: parseInt(row.STOCK, 10) || 0,
+            sizes: sizeList,
+            stockPerSize: stockPerSize,
+            stock: totalStock,
             desc: (row.DESKRIPSI || "").trim() || `Bagian dari koleksi ${row.TEMA || ""}.`,
             image: (row.GAMBAR && String(row.GAMBAR).trim().startsWith("http")) ? String(row.GAMBAR).trim() : null,
             color: colors[i % colors.length],
@@ -586,10 +600,7 @@
     return date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
   }
   function isDiscountActive(p) {
-    if (!p.discount || !p.discountStart || !p.discountEnd) return false;
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return today >= p.discountStart && today <= p.discountEnd;
+    return !!p.discount && p.discount > 0;
   }
 
   function finalPrice(p) {
@@ -607,7 +618,8 @@
       const opt = document.createElement("option");
       opt.value = region;
       const info = SHIPPING_RATES[region];
-      opt.textContent = `${region} — ${rupiah(info.price)} (${info.eta})`;
+      const priceLabel = info.price === 0 ? "Gratis" : rupiah(info.price);
+      opt.textContent = `${region} — ${priceLabel} (${info.eta})`;
       select.appendChild(opt);
     });
   }
@@ -647,7 +659,7 @@
             <span class="price-strike">${rupiah(p.price)}</span>
             <span class="price-final">${rupiah(finalPrice(p))}</span>
           </div>
-          <div class="discount-note">Pre-order sampai ${formatDateID(p.discountEnd)} · Launching ${formatDateID(p.launchDate)}</div>
+          <div class="discount-note">Diskon -${p.discount}% dari harga normal</div>
         </div>
       </div>
     `).join("");
@@ -687,7 +699,8 @@
 
   function openSheet(id) {
     activeProduct = products.find(p => p.id === id);
-    activeSize = activeProduct.sizes[0];
+    const firstAvailable = activeProduct.sizes.find(s => (activeProduct.stockPerSize[s] || 0) > 0);
+    activeSize = firstAvailable || activeProduct.sizes[0];
     activeQty = 1;
     document.getElementById("sheetArt").style.background = activeProduct.color;
     document.getElementById("sheetArt").innerHTML = activeProduct.image ? `<img src="${activeProduct.image}" alt="${activeProduct.name}">` : activeProduct.name;
@@ -698,31 +711,57 @@
       : rupiah(activeProduct.price);
     let badges = `<span class="badge-pill">Stok: ${activeProduct.stock}</span>`;
     if (isDiscountActive(activeProduct)) {
-      badges += `<span class="badge-pill discount">Diskon -${activeProduct.discount}% · Pre-order sampai ${formatDateID(activeProduct.discountEnd)}</span>`;
+      badges += `<span class="badge-pill discount">Diskon -${activeProduct.discount}%</span>`;
     }
     document.getElementById("sheetBadges").innerHTML = badges;
     document.getElementById("sheetDesc").textContent = activeProduct.desc;
     document.getElementById("qtyVal").textContent = activeQty;
-    document.getElementById("sheetSizes").innerHTML = activeProduct.sizes.map((s, i) => `
-      <button class="size-opt ${i===0?'active':''}" data-size="${s}" onclick="pickSize('${s}', this)">${s}</button>
-    `).join("");
+    document.getElementById("sheetSizes").innerHTML = activeProduct.sizes.map(s => {
+      const stockForSize = activeProduct.stockPerSize[s] || 0;
+      const isOut = stockForSize === 0;
+      const isCurrent = s === activeSize;
+      return `<button class="size-opt ${isCurrent ? 'active' : ''}" data-size="${s}" ${isOut ? 'disabled' : ''} onclick="pickSize('${s}', this)">${s}</button>`;
+    }).join("");
+    updateSizeStockNote();
     document.getElementById("overlay").classList.add("open");
+  }
+
+  function updateSizeStockNote() {
+    const stockForSize = activeProduct.stockPerSize[activeSize] || 0;
+    const note = document.getElementById("sizeStockNote");
+    if (stockForSize === 0) {
+      note.textContent = `Ukuran ${activeSize} sedang habis.`;
+    } else if (stockForSize <= 5) {
+      note.textContent = `Sisa ${stockForSize} pcs untuk ukuran ${activeSize} — stok terbatas!`;
+    } else {
+      note.textContent = `Stok ukuran ${activeSize}: ${stockForSize} pcs.`;
+    }
   }
 
   function closeSheet() { document.getElementById("overlay").classList.remove("open"); }
 
   function pickSize(size, el) {
     activeSize = size;
+    activeQty = 1;
+    document.getElementById("qtyVal").textContent = activeQty;
     document.querySelectorAll(".size-opt").forEach(b => b.classList.remove("active"));
     el.classList.add("active");
+    updateSizeStockNote();
   }
 
   function changeQty(delta) {
-    activeQty = Math.max(1, activeQty + delta);
+    const stockForSize = activeProduct.stockPerSize[activeSize] || 0;
+    const next = activeQty + delta;
+    activeQty = Math.max(1, Math.min(next, stockForSize || 1));
     document.getElementById("qtyVal").textContent = activeQty;
   }
 
   function addToCart() {
+    const stockForSize = activeProduct.stockPerSize[activeSize] || 0;
+    if (stockForSize === 0) {
+      updateSizeStockNote();
+      return;
+    }
     cart.push({
       ...activeProduct,
       originalPrice: activeProduct.price,
