@@ -242,7 +242,7 @@
     padding: 8px 14px; font-size: 13px; cursor: pointer; font-weight: 600;
   }
   .size-opt.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-  .size-opt:disabled { opacity: 0.35; cursor: not-allowed; text-decoration: line-through; }
+  .size-opt:disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; background: var(--card); color: var(--ink-soft); }
   .size-stock-note { font-size: 11px; color: var(--ink-soft); margin-top: -14px; margin-bottom: 20px; }
   .qty-row { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
   .qty-btn {
@@ -398,6 +398,14 @@
 </section>
 </div>
 
+<section class="brand-story">
+  <div class="brand-story-inner">
+    <h2 class="display">Cerita di Balik TANGGA.IDN</h2>
+    <p>Semua berawal dari sebuah lapangan olahraga—tempat dua pemuda dengan bakat seni sering bertemu. Keduanya punya karya, tapi sama-sama kesulitan memperkenalkannya ke publik. Dari keresahan itu, lahirlah diskusi panjang: bagaimana cara terbaik menyalurkan karya agar bisa dilihat dan dirasakan banyak orang?</p>
+    <p>Setelah melalui perdebatan demi perdebatan, mereka sepakat: media yang paling tepat adalah pakaian. Dari situ, sebuah brand mulai dibentuk—lengkap dengan proses pencarian nama yang tidak singkat, hingga akhirnya satu nama benar-benar terasa pas: TANGGA.IDN.</p>
+  </div>
+</section>
+
 <footer>
   <div class="footer-top">
     <div>
@@ -411,6 +419,12 @@
 </footer>
 
 <style>
+  .brand-story { background:#000; color:#fff; padding:72px 24px; }
+  .brand-story-inner { max-width:720px; margin:0 auto; }
+  .brand-story h2 { font-family:'Anton',sans-serif; font-weight:400; font-size:clamp(28px,6vw,44px); letter-spacing:.04em; text-transform:uppercase; margin:0 0 28px; color:#fff; }
+  .brand-story p { font-size:16px; line-height:1.8; margin:0 0 18px; color:#e5e5e5; }
+  .brand-story p:last-child { margin-bottom:0; }
+  @media (max-width:600px){ .brand-story { padding:48px 20px; } .brand-story p { font-size:15px; } }
   .footer-top {
     display: flex; justify-content: space-between; flex-wrap: wrap; gap: 24px;
     padding-bottom: 24px;
